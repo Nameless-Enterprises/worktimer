@@ -5,7 +5,7 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_PATH = path.join(__dirname, 'worktimer.db');
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'worktimer.db');
 
 let db;
 
