@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WORK TIMER</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --border: #2a2a2a;
+    --border-active: #444;
+    --text: #e8e8e8;
+    --text-dim: #666;
+    --text-mid: #999;
+    --accent: #c8f060;
+    --accent-dim: #7a9438;
+    --danger: #ff4d4d;
+    --running: #60d4f0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* HEADER */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+  }
+  header h1 {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--text-dim);
+    font-weight: 400;
+    text-transform: uppercase;
+  }
+  header .clock {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: auto;
+    letter-spacing: 0.1em;
+  }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: calc(100vh - 55px);
+  }
+
+  /* SIDEBAR */
+  aside {
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .sidebar-section {
+    padding: 0 20px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+  .sidebar-label {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: block;
+  }
+
+  /* New client form */
+  .add-client {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+  .add-client input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .add-client input:focus { border-color: var(--accent-dim); }
+  .add-client input::placeholder { color: var(--text-dim); }
+  .btn-add {
+    background: var(--accent);
+    color: #0e0e0e;
+    border: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 8px 12px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: opacity 0.15s;
+  }
+  .btn-add:hover { opacity: 0.85; }
+
+  /* Client list */
+  .client-list {
+    padding: 16px 0 0;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .client-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.1s;
+    gap: 10px;
+  }
+  .client-item:hover { background: var(--surface); }
+  .client-item.selected {
+    border-left-color: var(--accent);
+    background: #1a1e13;
+  }
+  .client-item.selected .client-name { color: var(--accent); }
+  .client-name {
+    font-size: 12px;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.03em;
+  }
+  .client-total {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .btn-del-client {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+    opacity: 0;
+    transition: opacity 0.1s, color 0.1s;
+  }
+  .client-item:hover .btn-del-client { opacity: 1; }
+  .btn-del-client:hover { color: var(--danger); }
+
+  /* Totals at bottom of sidebar */
+  .totals-section {
+    padding: 20px 20px 0;
+    border-top: 1px solid var(--border);
+    margin-top: auto;
+  }
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    padding: 5px 0;
+    color: var(--text-mid);
+  }
+  .total-row .t-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 140px;
+  }
+  .total-row .t-time { color: var(--text); }
+
+  /* MAIN */
+  main {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Timer panel */
+  .timer-panel {
+    padding: 40px 48px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 48px;
+  }
+  .timer-display {
+    font-size: 72px;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    line-height: 1;
+    transition: color 0.3s;
+    min-width: 320px;
+  }
+  .timer-display.running { color: var(--running); }
+  .timer-display.running { animation: pulse-glow 2s ease-in-out infinite; }
+
+  @keyframes pulse-glow {
+    0%, 100% { text-shadow: 0 0 20px rgba(96,212,240,0.15); }
+    50% { text-shadow: 0 0 40px rgba(96,212,240,0.35); }
+  }
+
+  .timer-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .client-selector {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+  .client-selector span {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .no-client { color: var(--danger); }
+
+  .btn-start, .btn-stop {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border: none;
+    padding: 14px 32px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-start {
+    background: var(--accent);
+    color: #0e0e0e;
+  }
+  .btn-start:hover { opacity: 0.85; }
+  .btn-start:disabled {
+    background: var(--border);
+    color: var(--text-dim);
+    cursor: not-allowed;
+  }
+  .btn-stop {
+    background: transparent;
+    color: var(--running);
+    border: 1px solid var(--running);
+  }
+  .btn-stop:hover { background: rgba(96,212,240,0.08); }
+
+  .session-note {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  /* LOG */
+  .log-section {
+    padding: 28px 48px;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .log-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .log-header h2 {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+  .log-filter {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .log-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .log-table th {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    text-align: left;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+  .log-table th:last-child { text-align: right; }
+  .log-table td {
+    font-size: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #1e1e1e;
+    vertical-align: top;
+  }
+  .log-table td:last-child { text-align: right; }
+  .log-table tr:hover td { background: #131313; }
+  .td-client {
+    color: var(--accent);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    padding-right: 24px;
+  }
+  .td-date { color: var(--text-mid); font-size: 11px; }
+  .td-time { color: var(--text-mid); font-size: 11px; padding-right: 24px; }
+  .td-duration { color: var(--text); font-weight: 600; white-space: nowrap; }
+  .td-running {
+    color: var(--running);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+  .btn-del-session {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0 0 0 16px;
+    opacity: 0;
+    transition: opacity 0.1s, color 0.1s;
+  }
+  .log-table tr:hover .btn-del-session { opacity: 1; }
+  .btn-del-session:hover { color: var(--danger); }
+
+  .empty-log {
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 40px 0;
+    letter-spacing: 0.05em;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-active); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>▶ Work Timer</h1>
+  <span class="clock" id="wallClock"></span>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="sidebar-section">
+      <span class="sidebar-label">Clients</span>
+      <div class="add-client">
+        <input id="newClientInput" type="text" placeholder="new client name" maxlength="60">
+        <button class="btn-add" onclick="addClient()">+</button>
+      </div>
+    </div>
+    <div class="client-list" id="clientList"></div>
+    <div class="totals-section" id="totalsSection"></div>
+  </aside>
+
+  <main>
+    <div class="timer-panel">
+      <div class="timer-display" id="timerDisplay">00:00:00</div>
+      <div class="timer-controls">
+        <div class="client-selector" id="clientIndicator">
+          <span class="no-client">— select a client —</span>
+        </div>
+        <button class="btn-start" id="btnStart" onclick="startSession()" disabled>START SESSION</button>
+        <div class="session-note" id="sessionNote"></div>
+      </div>
+    </div>
+    <div class="log-section">
+      <div class="log-header">
+        <h2>Session Log</h2>
+        <span class="log-filter" id="logFilter"></span>
+      </div>
+      <div id="logContainer"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+  let clients = [];
+  let selectedClientId = null;
+  let activeSession = null; // { id, client_id, started_at }
+  let timerInterval = null;
+  let logData = [];
+  let totals = [];
+
+  // ── WALL CLOCK ──
+  function updateWallClock() {
+    const now = new Date();
+    document.getElementById('wallClock').textContent =
+      now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) +
+      '  ' + now.toLocaleTimeString('en-US', { hour12: false });
+  }
+  setInterval(updateWallClock, 1000);
+  updateWallClock();
+
+  // ── TIMER TICK ──
+  function startTick() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      if (!activeSession) return;
+      const elapsed = Math.floor((Date.now() - new Date(activeSession.started_at).getTime()) / 1000);
+      document.getElementById('timerDisplay').textContent = formatDuration(elapsed);
+    }, 1000);
+  }
+
+  function formatDuration(secs) {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function formatDateTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function formatTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
+  // ── API ──
+  async function api(path, method = 'GET', body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(path, opts);
+    return res.json();
+  }
+
+  // ── CLIENTS ──
+  async function loadClients() {
+    clients = await api('/api/clients');
+    renderClients();
+  }
+
+  function renderClients() {
+    const list = document.getElementById('clientList');
+    if (!clients.length) {
+      list.innerHTML = '<div style="padding:12px 20px;font-size:11px;color:var(--text-dim)">No clients yet</div>';
+      return;
+    }
+    list.innerHTML = clients.map(c => {
+      const total = totals.find(t => t.client === c.name);
+      const totalStr = total ? formatDuration(total.total_seconds) : '—';
+      const sel = selectedClientId === c.id ? 'selected' : '';
+      return `<div class="client-item ${sel}" onclick="selectClient(${c.id})">
+        <span class="client-name">${esc(c.name)}</span>
+        <span class="client-total">${totalStr}</span>
+        <button class="btn-del-client" onclick="event.stopPropagation();deleteClient(${c.id})" title="Remove client">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  async function addClient() {
+    const input = document.getElementById('newClientInput');
+    const name = input.value.trim();
+    if (!name) return;
+    const c = await api('/api/clients', 'POST', { name });
+    if (c.error) { alert(c.error); return; }
+    input.value = '';
+    clients.push(c);
+    renderClients();
+  }
+
+  async function deleteClient(id) {
+    if (!confirm('Delete this client and all their sessions?')) return;
+    if (activeSession?.client_id === id) stopSession();
+    await api(`/api/clients/${id}`, 'DELETE');
+    clients = clients.filter(c => c.id !== id);
+    if (selectedClientId === id) selectClient(null);
+    await loadTotals();
+    await loadLog();
+    renderClients();
+  }
+
+  function selectClient(id) {
+    selectedClientId = id;
+    const c = clients.find(c => c.id === id);
+    const indicator = document.getElementById('clientIndicator');
+    const btnStart = document.getElementById('btnStart');
+    if (c) {
+      indicator.innerHTML = `Billing: <span>${esc(c.name)}</span>`;
+      if (!activeSession) btnStart.disabled = false;
+    } else {
+      indicator.innerHTML = '<span class="no-client">— select a client —</span>';
+      if (!activeSession) btnStart.disabled = true;
+    }
+    renderClients();
+    renderLog();
+  }
+
+  // ── SESSIONS ──
+  async function startSession() {
+    if (!selectedClientId) return;
+    const data = await api('/api/sessions/start', 'POST', { client_id: selectedClientId });
+    activeSession = { id: data.id, client_id: selectedClientId, started_at: data.started_at };
+
+    document.getElementById('timerDisplay').classList.add('running');
+    document.getElementById('btnStart').outerHTML =
+      `<button class="btn-stop" id="btnStart" onclick="stopSession()">STOP</button>`;
+    document.getElementById('sessionNote').textContent =
+      `started ${formatTime(data.started_at)}`;
+
+    startTick();
+    await loadLog();
+  }
+
+  async function stopSession() {
+    if (!activeSession) return;
+    const data = await api(`/api/sessions/${activeSession.id}/stop`, 'POST');
+    activeSession = null;
+    clearInterval(timerInterval);
+
+    document.getElementById('timerDisplay').textContent = '00:00:00';
+    document.getElementById('timerDisplay').classList.remove('running');
+    document.getElementById('btnStart').outerHTML =
+      `<button class="btn-start" id="btnStart" onclick="startSession()" ${selectedClientId ? '' : 'disabled'}>START SESSION</button>`;
+    document.getElementById('sessionNote').textContent =
+      `last session: ${formatDuration(data.duration_seconds)}`;
+
+    await loadLog();
+    await loadTotals();
+    renderClients();
+  }
+
+  async function deleteSession(id) {
+    await api(`/api/sessions/${id}`, 'DELETE');
+    await loadLog();
+    await loadTotals();
+    renderClients();
+  }
+
+  // ── LOG ──
+  async function loadLog() {
+    logData = await api('/api/log');
+    renderLog();
+  }
+
+  function renderLog() {
+    const container = document.getElementById('logContainer');
+    const filterLabel = document.getElementById('logFilter');
+
+    let rows = logData;
+    const sel = clients.find(c => c.id === selectedClientId);
+    if (sel) {
+      rows = rows.filter(r => r.client === sel.name);
+      filterLabel.textContent = `showing: ${esc(sel.name)}`;
+    } else {
+      filterLabel.textContent = 'all clients';
+    }
+
+    if (!rows.length) {
+      container.innerHTML = '<div class="empty-log">No sessions recorded yet.</div>';
+      return;
+    }
+
+    container.innerHTML = `<table class="log-table">
+      <thead><tr>
+        <th>Client</th>
+        <th>Date</th>
+        <th>Start</th>
+        <th>Duration</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r => {
+          const isRunning = activeSession?.id === r.id;
+          const dur = isRunning
+            ? `<span class="td-running">● RUNNING</span>`
+            : `<span class="td-duration">${r.duration_seconds != null ? formatDuration(r.duration_seconds) : '—'}</span>`;
+          return `<tr>
+            <td class="td-client">${esc(r.client)}</td>
+            <td class="td-date">${formatDateTime(r.started_at)}</td>
+            <td class="td-time">${formatTime(r.started_at)}</td>
+            <td>${dur}</td>
+            <td>${isRunning ? '' : `<button class="btn-del-session" onclick="deleteSession(${r.id})" title="Delete session">×</button>`}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  // ── TOTALS ──
+  async function loadTotals() {
+    totals = await api('/api/totals');
+    renderTotals();
+  }
+
+  function renderTotals() {
+    const section = document.getElementById('totalsSection');
+    if (!totals.length) { section.innerHTML = ''; return; }
+    const grandTotal = totals.reduce((s, t) => s + t.total_seconds, 0);
+    section.innerHTML = `
+      <span class="sidebar-label" style="display:block;padding-bottom:10px">All-time totals</span>
+      ${totals.map(t => `
+        <div class="total-row">
+          <span class="t-name">${esc(t.client)}</span>
+          <span class="t-time">${formatDuration(t.total_seconds)}</span>
+        </div>`).join('')}
+      <div class="total-row" style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;color:var(--text)">
+        <span>TOTAL</span>
+        <span>${formatDuration(grandTotal)}</span>
+      </div>`;
+  }
+
+  // ── UTILS ──
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── KEYBOARD ──
+  document.getElementById('newClientInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addClient();
+  });
+
+  // ── INIT ──
+  async function init() {
+    await loadTotals();
+    await loadClients();
+    await loadLog();
+  }
+  init();
+</script>
+</body>
+</html>
